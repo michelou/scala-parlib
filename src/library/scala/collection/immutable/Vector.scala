@@ -13,7 +13,9 @@ import scala.annotation.unchecked.uncheckedVariance
 import compat.Platform
 import scala.collection.generic._
 import scala.collection.mutable.Builder
+/*@PAR*/
 import scala.collection.parallel.immutable.ParVector
+/*PAR@*/
 
 /** Companion object to the Vector class
  */
@@ -61,7 +63,7 @@ extends AbstractSeq[A]
    with IndexedSeqLike[A, Vector[A]]
    with VectorPointer[A @uncheckedVariance]
    with Serializable
-   with CustomParallelizable[A, ParVector[A]]
+   /*@PAR*/ with CustomParallelizable[A, ParVector[A]] /*PAR@*/
 { self =>
 
 override def companion: GenericCompanion[Vector] = Vector
@@ -75,7 +77,9 @@ override def companion: GenericCompanion[Vector] = Vector
 
   def length = endIndex - startIndex
 
+  /*@PAR*/
   override def par = new ParVector(this)
+  /*PAR@*/
 
   override def lengthCompare(len: Int): Int = length - len
 

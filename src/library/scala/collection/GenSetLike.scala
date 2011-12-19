@@ -26,7 +26,7 @@ trait GenSetLike[A, +Repr]
 extends GenIterableLike[A, Repr]
    with (A => Boolean)
    with Equals
-   with Parallelizable[A, parallel.ParSet[A]] {
+   /*@PAR*/ with Parallelizable[A, parallel.ParSet[A]] /*PAR@*/ {
 
   def iterator: Iterator[A]
   def contains(elem: A): Boolean

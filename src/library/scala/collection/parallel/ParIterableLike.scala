@@ -6,19 +6,21 @@
 **                          |/                                          **
 \*                                                                      */
 
-
 package scala.collection.parallel
 
-
-
-
-import scala.collection.mutable.Builder
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.Builder
 import scala.collection.IterableLike
+/*@PAR*/
 import scala.collection.Parallel
 import scala.collection.Parallelizable
 import scala.collection.CustomParallelizable
 import scala.collection.generic._
+/*PAR@*/
+/*@NOPAR
+import scala.collection.generic.{HasNewCombiner => _, CanCombineFrom => _, _}
+import generic._
+PARNO@*/
 import scala.collection.GenIterableLike
 import scala.collection.GenIterable
 import scala.collection.GenTraversableOnce
@@ -1418,31 +1420,4 @@ self: ParIterableLike[T, Repr, Sequential] =>
   })
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

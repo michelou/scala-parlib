@@ -1,8 +1,8 @@
 object Test {
   
   def checkPar(sz: Int) {
-    import collection._
-    val hs = mutable.HashSet[Int]() ++ (1 to sz)
+    /*@NOPAR*/ import collection.parallel._ /*NOPAR@*/
+    val hs = collection.mutable.HashSet[Int]() ++ (1 to sz)
     assert(hs.par.map(_ + 1).seq.toSeq.sorted == (2 to (sz + 1)))
   }
   

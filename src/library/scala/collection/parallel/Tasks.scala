@@ -6,19 +6,12 @@
 **                          |/                                          **
 \*                                                                      */
 
-
 package scala.collection.parallel
-
-
-
 
 import scala.concurrent.forkjoin._
 import scala.util.control.Breaks._
 
-
 import annotation.unchecked.uncheckedVariance
-
-
 
 
 /** A trait that declares task execution capabilities used
@@ -526,11 +519,4 @@ trait AdaptiveWorkStealingThreadPoolTasks extends ThreadPoolTasks with AdaptiveW
   def newTaskImpl[R, Tp](b: Task[R, Tp]) = new TaskImpl[R, Tp](b)
 
 }
-
-
-
-
-
-
-
 

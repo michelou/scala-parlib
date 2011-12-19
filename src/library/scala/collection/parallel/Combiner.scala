@@ -6,14 +6,13 @@
 **                          |/                                          **
 \*                                                                      */
 
-
 package scala.collection.parallel
 
-
+/*@PAR*/
 import scala.collection.Parallel
+/*PAR@*/
 import scala.collection.mutable.Builder
 import scala.collection.generic.Sizing
-
 
 
 /** The base trait for all combiners.

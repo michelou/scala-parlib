@@ -12,7 +12,9 @@ import generic._
 import mutable.{ Builder }
 import annotation.{tailrec, migration, bridge}
 import annotation.unchecked.{ uncheckedVariance => uV }
+/*@PAR*/
 import parallel.ParIterable
+/*PAR@*/
 
 /** A template trait for traversable collections of type `Traversable[A]`.
  *
@@ -68,7 +70,7 @@ trait TraversableLike[+A, +Repr] extends HasNewBuilder[A, Repr]
                                     with FilterMonadic[A, Repr]
                                     with TraversableOnce[A]
                                     with GenTraversableLike[A, Repr]
-                                    with Parallelizable[A, ParIterable[A]]
+                                    /*@PAR*/ with Parallelizable[A, ParIterable[A]] /*PAR@*/
 {
   self =>
 
@@ -98,7 +100,9 @@ trait TraversableLike[+A, +Repr] extends HasNewBuilder[A, Repr]
    */
   protected[this] def newBuilder: Builder[A, Repr]
 
+  /*@PAR*/
   protected[this] def parCombiner = ParIterable.newCombiner[A]
+  /*PAR@*/
 
   /** Applies a function `f` to all elements of this $coll.
    *

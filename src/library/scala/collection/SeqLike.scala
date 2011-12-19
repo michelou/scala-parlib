@@ -11,7 +11,9 @@ package scala.collection
 import mutable.{ ListBuffer, ArraySeq }
 import immutable.{ List, Range }
 import generic._
+/*@PAR*/
 import parallel.ParSeq
+/*PAR@*/
 import annotation.bridge
 import scala.math.Ordering
 
@@ -59,7 +61,11 @@ import scala.math.Ordering
  *  @define orderDependent
  *  @define orderDependentFold
  */
-trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] with Parallelizable[A, ParSeq[A]] { self =>
+trait SeqLike[+A, +Repr] extends IterableLike[A, Repr]
+                            with GenSeqLike[A, Repr]
+                   /*@ICE with interfaces.SeqMethods[A, Repr] ICE@*/
+                   /*@PAR*/ with Parallelizable[A, ParSeq[A]] /*PAR@*/
+{ self =>
 
   override protected[this] def thisCollection: Seq[A] = this.asInstanceOf[Seq[A]]
   override protected[this] def toCollection(repr: Repr): Seq[A] = repr.asInstanceOf[Seq[A]]
@@ -68,7 +74,9 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
 
   def apply(idx: Int): A
 
+  /*@PAR*/
   protected[this] override def parCombiner = ParSeq.newCombiner[A]
+  /*PAR@*/
 
   /** Compares the length of this $coll to a test value.
    *

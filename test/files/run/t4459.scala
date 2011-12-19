@@ -1,4 +1,4 @@
-import collection._
+import collection._ /*@NOPAR*/, collection.parallel._ /*NOPAR@*/
 
 object Test {
   def main(args: Array[String]) {

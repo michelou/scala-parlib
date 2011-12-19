@@ -12,7 +12,9 @@ package scala.collection
 package mutable
 
 import generic._
+/*@PAR*/
 import parallel.mutable.ParArray
+/*PAR@*/
 
 /** A class for polymorphic arrays of elements that's represented
  *  internally by an array of objects. This means that elements of
@@ -47,7 +49,7 @@ extends AbstractSeq[A]
    with IndexedSeq[A]
    with GenericTraversableTemplate[A, ArraySeq]
    with IndexedSeqOptimized[A, ArraySeq[A]]
-   with CustomParallelizable[A, ParArray[A]]
+   /*@PAR*/ with CustomParallelizable[A, ParArray[A]] /*PAR@*/
    with Serializable
 {
 
@@ -55,7 +57,9 @@ extends AbstractSeq[A]
 
   val array: Array[AnyRef] = new Array[AnyRef](length)
 
+  /*@PAR*/
   override def par = ParArray.handoff(array.asInstanceOf[Array[A]], length)
+  /*PAR@*/
 
   def apply(idx: Int): A = {
     if (idx >= length) throw new IndexOutOfBoundsException(idx.toString)

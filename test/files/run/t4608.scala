@@ -1,4 +1,5 @@
 // #4608
+/*@NOPAR*/ import collection.parallel._ /*NOPAR@*/
 object Test {
   
   def main(args: Array[String]) {

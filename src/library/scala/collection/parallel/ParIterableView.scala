@@ -8,7 +8,7 @@
 
 package scala.collection.parallel
 
-import scala.collection.{ Parallel, IterableView, GenIterableView, Iterator }
+import scala.collection.{ /*@PAR*/ Parallel, /*PAR@*/ IterableView, GenIterableView, Iterator }
 import scala.collection.generic.CanCombineFrom
 
 /** A template view of a non-strict view of a parallel iterable collection.

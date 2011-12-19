@@ -8,11 +8,16 @@
 
 package scala.collection.parallel
 
-import scala.collection.{ Parallel, SeqView, SeqViewLike, GenSeqView, GenSeqViewLike, GenSeq }
+import scala.collection.{ /*@PAR*/ Parallel, /*PAR@*/ SeqView, SeqViewLike, GenSeqView, GenSeqViewLike, GenSeq }
 import scala.collection.{ GenIterable, GenTraversable, GenTraversableOnce, Iterator }
 import scala.collection.generic.{ CanBuildFrom, SliceInterval }
+/*@PAR*/
 import scala.collection.generic.CanCombineFrom
-import scala.collection.parallel.immutable.ParRange
+/*PAR@*/
+/*@NOPAR
+import generic.CanCombineFrom
+PARNO@*/
+import immutable.ParRange
 
 
 /** A template view of a non-strict view of parallel sequence.

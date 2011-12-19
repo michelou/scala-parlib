@@ -13,7 +13,9 @@ package immutable
 
 import annotation.unchecked.{ uncheckedVariance => uV }
 import generic._
+/*@PAR*/
 import collection.parallel.immutable.ParHashSet
+/*PAR@*/
 
 /** This class implements immutable sets using a hash trie.
  *
@@ -34,14 +36,16 @@ class HashSet[A] extends AbstractSet[A]
                     with Set[A]
                     with GenericSetTemplate[A, HashSet]
                     with SetLike[A, HashSet[A]]
-                    with CustomParallelizable[A, ParHashSet[A]]
+                    /*@PAR*/ with CustomParallelizable[A, ParHashSet[A]] /*PAR@*/
                     with Serializable
 {
   override def companion: GenericCompanion[HashSet] = HashSet
 
   //class HashSet[A] extends Set[A] with SetLike[A, HashSet[A]] {
 
+  /*@PAR*/
   override def par = ParHashSet.fromTrie(this)
+  /*PAR@*/
 
   override def size: Int = 0
 

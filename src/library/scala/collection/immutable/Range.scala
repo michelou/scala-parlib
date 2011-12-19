@@ -9,7 +9,9 @@
 
 package scala.collection.immutable
 
+/*@PAR*/
 import scala.collection.parallel.immutable.ParRange
+/*PAR@*/
 import annotation.bridge
 
 /** The `Range` class represents integer values in range
@@ -46,10 +48,12 @@ import annotation.bridge
 class Range(val start: Int, val end: Int, val step: Int)
 extends collection.AbstractSeq[Int]
    with IndexedSeq[Int]
-   with collection.CustomParallelizable[Int, ParRange]
+   /*@PAR*/ with collection.CustomParallelizable[Int, ParRange] /*PAR@*/
    with Serializable
 {
+  /*@PAR*/
   override def par = new ParRange(this)
+  /*PAR@*/
 
   private def gap           = end.toLong - start.toLong
   private def isExact       = gap % step == 0

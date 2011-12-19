@@ -979,6 +979,7 @@ PACKED QUICK BUILD (PACK)
   
   <target name="pack.done" depends="pack.bin">
     <path id="pack.classpath">
+      <pathelement location="${build-pack.dir}/lib/scala-actors.jar"/>
       <pathelement location="${build-pack.dir}/lib/scala-library.jar"/>
       <pathelement location="${build-pack.dir}/lib/scala-compiler.jar"/>
       <pathelement location="${build-pack.dir}/lib/scala-partest.jar"/>

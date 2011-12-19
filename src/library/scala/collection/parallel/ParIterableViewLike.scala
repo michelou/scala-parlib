@@ -8,7 +8,9 @@
 
 package scala.collection.parallel
 
+/*@PAR*/
 import scala.collection.Parallel
+/*PAR@*/
 import scala.collection.{ IterableView, IterableViewLike }
 import scala.collection.{ GenIterableView, GenIterableViewLike }
 import scala.collection.GenTraversableOnce
@@ -16,10 +18,13 @@ import scala.collection.GenTraversable
 import scala.collection.GenIterable
 import scala.collection.GenSeq
 import scala.collection.generic.{ CanBuildFrom, SliceInterval }
+/*@PAR*/
 import scala.collection.generic.CanCombineFrom
-import scala.collection.parallel.immutable.ParRange
-
-
+/*PAR@*/
+/*@NOPAR
+import generic.CanCombineFrom
+PARNO@*/
+import immutable.ParRange
 
 /** A template view of a non-strict view of parallel iterable collection.
  *
@@ -190,14 +195,4 @@ self =>
   }
 
 }
-
-
-
-
-
-
-
-
-
-
 

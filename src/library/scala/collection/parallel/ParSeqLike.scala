@@ -8,11 +8,16 @@
 
 package scala.collection.parallel
 
-import scala.collection.{ Parallel, SeqLike, GenSeqLike, GenSeq, GenIterable, Iterator }
+import scala.collection.{ /*@PAR*/ Parallel, /*PAR@*/ SeqLike, GenSeqLike, GenSeq, GenIterable, Iterator }
 import scala.collection.generic.DefaultSignalling
 import scala.collection.generic.AtomicIndexFlag
 import scala.collection.generic.CanBuildFrom
+/*@PAR*/
 import scala.collection.generic.CanCombineFrom
+/*PAR@*/
+/*@NOPAR
+import generic.CanCombineFrom
+PARNO@*/
 import scala.collection.generic.VolatileAbort
 
 

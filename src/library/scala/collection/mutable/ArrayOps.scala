@@ -14,8 +14,9 @@ import compat.Platform.arraycopy
 
 import scala.reflect.ClassManifest
 
+/*@PAR*/
 import parallel.mutable.ParArray
-
+/*PAR@*/
 
 /** This class serves as a wrapper for `Array`s with all the operations found in
  *  indexed sequences. Where needed, instances of arrays are implicitly converted
@@ -35,7 +36,7 @@ import parallel.mutable.ParArray
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-abstract class ArrayOps[T] extends ArrayLike[T, Array[T]] with CustomParallelizable[T, ParArray[T]] {
+abstract class ArrayOps[T] extends ArrayLike[T, Array[T]] /*@PAR*/ with CustomParallelizable[T, ParArray[T]] /*PAR@*/ {
 
   private def rowBuilder[U]: Builder[U, Array[U]] =
     Array.newBuilder(
@@ -54,7 +55,9 @@ abstract class ArrayOps[T] extends ArrayLike[T, Array[T]] with CustomParalleliza
     else
       super.toArray[U]
 
+  /*@PAR*/
   override def par = ParArray.handoff(repr)
+  /*PAR@*/
 
   /** Flattens a two-dimensional array by concatenating all its rows
    *  into a single array.

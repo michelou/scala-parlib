@@ -13,7 +13,9 @@ package mutable
 
 import scala.reflect.ClassManifest
 import scala.collection.generic._
+/*@PAR*/
 import scala.collection.parallel.mutable.ParArray
+/*PAR@*/
 
 /**
  *  A class representing `Array[T]`.
@@ -34,7 +36,7 @@ abstract class WrappedArray[T]
 extends AbstractSeq[T]
     with IndexedSeq[T]
     with ArrayLike[T, WrappedArray[T]]
-    with CustomParallelizable[T, ParArray[T]]
+    /*@PAR*/ with CustomParallelizable[T, ParArray[T]] /*PAR@*/
 {
 
   override protected[this] def thisCollection: WrappedArray[T] = this
@@ -55,7 +57,9 @@ extends AbstractSeq[T]
   /** The underlying array */
   def array: Array[T]
 
+  /*@PAR*/
   override def par = ParArray.handoff(array)
+  /*PAR@*/
 
   override def toArray[U >: T : ClassManifest]: Array[U] =
     if (implicitly[ClassManifest[U]].erasure eq array.getClass.getComponentType)

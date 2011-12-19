@@ -12,7 +12,9 @@ package scala.collection
 package mutable
 
 import generic._
+/*@PAR*/
 import collection.parallel.mutable.ParHashSet
+/*PAR@*/
 
 /** This class implements mutable sets using a hashtable.
  *
@@ -44,7 +46,7 @@ extends AbstractSet[A]
    with GenericSetTemplate[A, HashSet]
    with SetLike[A, HashSet[A]]
    with FlatHashTable[A]
-   with CustomParallelizable[A, ParHashSet[A]]
+   /*@PAR*/ with CustomParallelizable[A, ParHashSet[A]] /*PAR@*/
    with Serializable
 {
   initWithContents(contents)
@@ -61,7 +63,9 @@ extends AbstractSet[A]
 
   def -= (elem: A): this.type = { removeEntry(elem); this }
 
+  /*@PAR*/
   override def par = new ParHashSet(hashTableContents)
+  /*PAR@*/
 
   override def add(elem: A): Boolean = addEntry(elem)
 

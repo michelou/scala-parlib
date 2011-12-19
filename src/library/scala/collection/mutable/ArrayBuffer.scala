@@ -12,7 +12,9 @@ package scala.collection
 package mutable
 
 import generic._
+/*@PAR*/
 import parallel.mutable.ParArray
+/*PAR@*/
 
 /** An implementation of the `Buffer` class using an array to
  *  represent the assembled sequence internally. Append, update and random
@@ -52,7 +54,7 @@ class ArrayBuffer[A](override protected val initialSize: Int)
      with IndexedSeqOptimized[A, ArrayBuffer[A]]
      with Builder[A, ArrayBuffer[A]]
      with ResizableArray[A]
-     with CustomParallelizable[A, ParArray[A]]
+     /*@PAR*/ with CustomParallelizable[A, ParArray[A]] /*PAR@*/
      with Serializable {
 
   override def companion: GenericCompanion[ArrayBuffer] = ArrayBuffer
@@ -71,7 +73,9 @@ class ArrayBuffer[A](override protected val initialSize: Int)
     }
   }
 
+  /*@PAR*/
   override def par = ParArray.handoff[A](array.asInstanceOf[Array[A]], size)
+  /*PAR@*/
 
   /** Appends a single element to this buffer and returns
    *  the identity of the buffer. It takes constant amortized time.

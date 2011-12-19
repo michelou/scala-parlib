@@ -12,7 +12,9 @@ package scala.collection
 import generic._
 import mutable.{ Builder, SetBuilder }
 import annotation.{migration, bridge}
+/*@PAR*/
 import parallel.ParSet
+/*PAR@*/
 
 /** A template trait for sets.
  *
@@ -60,7 +62,7 @@ trait SetLike[A, +This <: SetLike[A, This] with Set[A]]
 extends IterableLike[A, This]
    with GenSetLike[A, This]
    with Subtractable[A, This]
-   with Parallelizable[A, ParSet[A]]
+   /*@PAR*/ with Parallelizable[A, ParSet[A]] /*PAR@*/
 {
 self =>
 
@@ -76,7 +78,9 @@ self =>
    */
   override protected[this] def newBuilder: Builder[A, This] = new SetBuilder[A, This](empty)
 
+  /*@PAR*/
   protected[this] override def parCombiner = ParSet.newCombiner[A]
+  /*PAR@*/
 
   /** Overridden for efficiency. */
   override def toSeq: Seq[A] = toBuffer[A]

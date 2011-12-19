@@ -9,8 +9,13 @@
 
 package scala.collection.parallel
 
-import scala.collection.{ TraversableView, SeqView, Parallel, Iterator }
+import scala.collection.{ TraversableView, SeqView, /*@PAR*/ Parallel, /*PAR@*/ Iterator }
+/*@PAR*/
 import scala.collection.generic.CanCombineFrom
+/*PAR@*/
+/*@NOPAR
+import generic.CanCombineFrom
+PARNO@*/
 
 /** A template view of a non-strict view of a parallel sequence.
  *
