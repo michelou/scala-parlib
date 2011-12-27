@@ -2950,6 +2950,11 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
       new DeSkolemizeMap mapOver tp
     }
 
+    def typedClassOf(tree: Tree, tpt: Tree) = {
+      checkClassType(tpt, true, false)
+      atPos(tree.pos)(gen.mkClassOf(tpt.tpe))
+    }
+
     protected def typedExistentialTypeTree(tree: ExistentialTypeTree, mode: Int): Tree = {
       for (wc <- tree.whereClauses)
         if (wc.symbol == NoSymbol) { namer.enterSym(wc); wc.symbol setFlag EXISTENTIAL }
@@ -2989,10 +2994,9 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
         if (sameLength(tparams, args)) {
           val targs = args map (_.tpe)
           checkBounds(tree.pos, NoPrefix, NoSymbol, tparams, targs, "")
-          if (fun.symbol == Predef_classOf) {
-            checkClassType(args.head, true, false)
-            atPos(tree.pos) { gen.mkClassOf(targs.head) }
-          } else {
+          if (fun.symbol == Predef_classOf)
+            typedClassOf(tree, args.head)
+          else {
             if (!isPastTyper && fun.symbol == Any_isInstanceOf && !targs.isEmpty)
               checkCheckable(tree.pos, targs.head, "")
             val resultpe = restpe.instantiateTypeParams(tparams, targs)
@@ -3219,9 +3223,19 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
             val owntype = elimAnonymousClass(owntype0)
             if (needAdapt) cases1 = cases1 map (adaptCase(_, owntype))
 
-            val translated = (new MatchTranslator(this)).translateMatch(selector1, cases1, owntype)
-
-            typed1(translated, mode, WildcardType) setType owntype // TODO: get rid of setType owntype -- it should all typecheck
+            (new MatchTranslator(this)).translateMatch(selector1, cases1, owntype) match {
+              case Block(vd :: Nil, tree@Match(selector, cases)) =>
+                val selector1 = checkDead(typed(selector, EXPRmode | BYVALmode, WildcardType))
+                var cases1 = typedCases(tree, cases, packCaptured(selector1.tpe.widen), pt)
+                val (owntype, needAdapt) = ptOrLub(cases1 map (_.tpe))
+                if (needAdapt)
+                  cases1 = cases1 map (adaptCase(_, owntype))
+                typed(Block(vd :: Nil, treeCopy.Match(tree, selector1, cases1) setType owntype))
+              case translated =>
+                // TODO: get rid of setType owntype -- it should all typecheck
+                // must call typed, not typed1, or we overflow the stack when emitting switches
+                typed(translated, mode, WildcardType) setType owntype
+            }
           }
         }
       }
@@ -3769,7 +3783,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
           reallyExists(sym) &&
           ((mode & PATTERNmode | FUNmode) != (PATTERNmode | FUNmode) || !sym.isSourceMethod || sym.hasFlag(ACCESSOR))
         }
-
+        
         if (defSym == NoSymbol) {
           var defEntry: ScopeEntry = null // the scope entry of defSym, if defined in a local scope
 
@@ -3900,13 +3914,23 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
             }
           }
         }
-        if (defSym.owner.isPackageClass) pre = defSym.owner.thisType
+        if (defSym.owner.isPackageClass)
+          pre = defSym.owner.thisType
+
+        // Inferring classOf type parameter from expected type.
         if (defSym.isThisSym) {
           typed1(This(defSym.owner) setPos tree.pos, mode, pt)
-        } else {
-          val tree1 = if (qual == EmptyTree) tree
-                      else atPos(tree.pos)(Select(qual, name))
-                    // atPos necessary because qualifier might come from startContext
+        }
+        // Inferring classOf type parameter from expected type.  Otherwise an
+        // actual call to the stubbed classOf method is generated, returning null.
+        else if (isPredefMemberNamed(defSym, nme.classOf) && pt.typeSymbol == ClassClass && pt.typeArgs.nonEmpty)
+          typedClassOf(tree, TypeTree(pt.typeArgs.head))
+        else {
+          val tree1 = (
+            if (qual == EmptyTree) tree
+            // atPos necessary because qualifier might come from startContext
+            else atPos(tree.pos)(Select(qual, name))
+          )
           val (tree2, pre2) = makeAccessible(tree1, defSym, pre, qual)
           // assert(pre.typeArgs isEmpty) // no need to add #2416-style check here, right?
           stabilize(tree2, pre2, mode, pt) match {
