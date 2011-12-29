@@ -63,7 +63,6 @@ import scala.math.Ordering
  */
 trait SeqLike[+A, +Repr] extends IterableLike[A, Repr]
                             with GenSeqLike[A, Repr]
-                   /*@ICE with interfaces.SeqMethods[A, Repr] ICE@*/
                    /*@PAR*/ with Parallelizable[A, ParSeq[A]] /*PAR@*/
 { self =>
 
