@@ -45,8 +45,9 @@ trait Implicits {
    *  @return                 A search result
    */
   def inferImplicit(tree: Tree, pt: Type, reportAmbiguous: Boolean, isView: Boolean, context: Context): SearchResult = {
-    printInference("[inferImplicit%s] pt = %s".format(
-      if (isView) " view" else "", pt)
+    printInference("[infer %s] %s with pt=%s in %s".format(
+      if (isView) "view" else "implicit",
+      tree, pt, context.owner.enclClass)
     )
     printTyping(
       ptBlock("infer implicit" + (if (isView) " view" else ""),
@@ -65,7 +66,7 @@ trait Implicits {
       printTyping("typing implicit: %s %s".format(tree, context.undetparamsString))
 
     val result = new ImplicitSearch(tree, pt, isView, context.makeImplicit(reportAmbiguous)).bestImplicit
-    printInference("[inferImplicit] result: " + result)
+    printInference("[infer implicit] inferred " + result)
     context.undetparams = context.undetparams filterNot result.subst.from.contains
 
     stopTimer(implicitNanos, start)
@@ -191,12 +192,10 @@ trait Implicits {
    */
   def memberWildcardType(name: Name, tp: Type) = {
     val result = refinedType(List(WildcardType), NoSymbol)
-    var psym = name match {
-      case x: TypeName  => result.typeSymbol.newAbstractType(NoPosition, x)
-      case x: TermName  => result.typeSymbol.newValue(NoPosition, x)
+    name match {
+      case x: TermName => result.typeSymbol.newValue(x) setInfoAndEnter tp
+      case x: TypeName => result.typeSymbol.newAbstractType(x) setInfoAndEnter tp
     }
-    psym setInfo tp
-    result.decls enter psym
     result
   }
 
@@ -214,10 +213,10 @@ trait Implicits {
   /** An extractor for types of the form ? { name: (? >: argtpe <: Any*)restp }
    */
   object HasMethodMatching {
+    val dummyMethod = new TermSymbol(NoSymbol, NoPosition, newTermName("typer$dummy"))
+    def templateArgType(argtpe: Type) = new BoundedWildcardType(TypeBounds.lower(argtpe))
+    
     def apply(name: Name, argtpes: List[Type], restpe: Type): Type = {
-      def templateArgType(argtpe: Type) =
-        new BoundedWildcardType(TypeBounds(argtpe, AnyClass.tpe))
-      val dummyMethod = new TermSymbol(NoSymbol, NoPosition, "typer$dummy")
       val mtpe = MethodType(dummyMethod.newSyntheticValueParams(argtpes map templateArgType), restpe)
       memberWildcardType(name, mtpe)
     }
@@ -395,7 +394,6 @@ trait Implicits {
      *  @pre           `info.tpe` does not contain an error
      */
     private def typedImplicit(info: ImplicitInfo, ptChecked: Boolean): SearchResult = {
-      printInference("[typedImplicit] " + info)
       (context.openImplicits find { case (tp, sym) => sym == tree.symbol && dominates(pt, tp)}) match {
          case Some(pending) =>
            // println("Pending implicit "+pending+" dominates "+pt+"/"+undetParams) //@MDEBUG
@@ -614,16 +612,15 @@ trait Implicits {
             info.sym.fullLocationString, itree1.symbol.fullLocationString))
         else {
           val tvars = undetParams map freshVar
+          def ptInstantiated = pt.instantiateTypeParams(undetParams, tvars)
+          
+          printInference("[search] considering %s (pt contains %s) trying %s against pt=%s".format(
+            if (undetParams.isEmpty) "no tparams" else undetParams.map(_.name).mkString(", "),
+            typeVarsInType(ptInstantiated) filterNot (_.isGround) match { case Nil => "no tvars" ; case tvs => tvs.mkString(", ") },
+            itree2.tpe, pt
+          ))
 
-          if (matchesPt(itree2.tpe, pt.instantiateTypeParams(undetParams, tvars), undetParams)) {
-            printInference(
-              ptBlock("matchesPt",
-                "itree1"      -> itree1,
-                "tvars"       -> tvars,
-                "undetParams" -> undetParams
-              )
-            )
-
+          if (matchesPt(itree2.tpe, ptInstantiated, undetParams)) {
             if (tvars.nonEmpty)
               printTyping(ptLine("" + info.sym, "tvars" -> tvars, "tvars.constr" -> tvars.map(_.constr)))
 
@@ -637,6 +634,7 @@ trait Implicits {
             // we must be conservative in leaving type params in undetparams
             // prototype == WildcardType: want to remove all inferred Nothings
             val AdjustedTypeArgs(okParams, okArgs) = adjustTypeArgs(undetParams, tvars, targs)
+            
             val subst: TreeTypeSubstituter =
               if (okParams.isEmpty) EmptyTreeTypeSubstituter
               else {
@@ -663,11 +661,10 @@ trait Implicits {
             }
             val result = new SearchResult(itree2, subst)
             incCounter(foundImplicits)
-            printInference("[typedImplicit1] SearchResult: " + result)
+            printInference("[success] found %s for pt %s".format(result, ptInstantiated))
             result
           }
-          else fail("incompatible: %s does not match expected type %s".format(
-            itree2.tpe, pt.instantiateTypeParams(undetParams, tvars)))
+          else fail("incompatible: %s does not match expected type %s".format(itree2.tpe, ptInstantiated))
         }
       }
       catch {
@@ -786,16 +783,11 @@ trait Implicits {
         // most frequent one first
         matches sortBy (x => if (isView) -x.useCountView else -x.useCountArg)
       }
-      def eligibleString = {
-        val args = List(
-          "search"   -> pt,
-          "target"   -> tree,
-          "isView"   -> isView
-        ) ++ eligible.map("eligible" -> _)
-
-        ptBlock("Implicit search in " + context, args: _*)
-      }
-      printInference(eligibleString)
+      if (eligible.nonEmpty)
+        printInference("[search%s] %s with pt=%s in %s, eligible:\n  %s".format(
+          if (isView) " view" else "",
+          tree, pt, context.owner.enclClass, eligible.mkString("\n  "))
+        )
 
       /** Faster implicit search.  Overall idea:
        *   - prune aggressively

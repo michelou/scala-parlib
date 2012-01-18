@@ -46,8 +46,6 @@ trait PatMatVirtualiser extends ast.TreeDSL { self: Analyzer =>
   import global._
   import definitions._
 
-  private lazy val matchingStrategyTycon = definitions.getClass("scala.MatchingStrategy").typeConstructor
-
   class MatchTranslator(typer: Typer) extends MatchCodeGen {
     def typed(tree: Tree, mode: Int, pt: Type): Tree = typer.typed(tree, mode, pt) // for MatchCodeGen -- imports don't provide implementations for abstract members
 
@@ -55,7 +53,7 @@ trait PatMatVirtualiser extends ast.TreeDSL { self: Analyzer =>
     import typeDebug.{ ptTree, ptBlock, ptLine }
 
     def solveContextBound(contextBoundTp: Type): (Tree, Type) = {
-      val solSym      = NoSymbol.newTypeParameter(NoPosition, "SolveImplicit$".toTypeName)
+      val solSym      = NoSymbol.newTypeParameter(newTypeName("SolveImplicit$"))
       val param       = solSym.setInfo(contextBoundTp.typeSymbol.typeParams(0).info.cloneInfo(solSym)) // TypeBounds(NothingClass.typeConstructor, baseTp)
       val pt          = appliedType(contextBoundTp, List(param.tpeHK))
       val savedUndets = context.undetparams
@@ -67,7 +65,7 @@ trait PatMatVirtualiser extends ast.TreeDSL { self: Analyzer =>
       (result.tree, result.subst.to(result.subst.from indexOf param))
     }
 
-    lazy val (matchingStrategy, matchingMonadType) = solveContextBound(matchingStrategyTycon)
+    lazy val (matchingStrategy, matchingMonadType) = solveContextBound(MatchingStrategyClass.typeConstructor)
 
     /** Implement a pattern match by turning its cases (including the implicit failure case)
       * into the corresponding (monadic) extractors, and combining them with the `orElse` combinator.
@@ -1247,7 +1245,7 @@ defined class Foo */
         }
         t match {
           case Function(_, _) if t.symbol == NoSymbol =>
-            t.symbol = currentOwner.newValue(t.pos, nme.ANON_FUN_NAME).setFlag(SYNTHETIC).setInfo(NoType)
+            t.symbol = currentOwner.newAnonymousFunctionValue(t.pos)
             // println("new symbol for "+ (t, t.symbol.ownerChain))
           case Function(_, _) if (t.symbol.owner == NoSymbol) || (t.symbol.owner == origOwner) =>
             // println("fundef: "+ (t, t.symbol.ownerChain, currentOwner.ownerChain))
@@ -1379,19 +1377,19 @@ defined class Foo */
       @inline private def dontStore(tp: Type) = (tp.typeSymbol eq UnitClass) || (tp.typeSymbol eq NothingClass)
       lazy val keepGoing = freshSym(NoPosition, BooleanClass.tpe, "keepGoing") setFlag MUTABLE
       lazy val matchRes  = freshSym(NoPosition, AnyClass.tpe, "matchRes") setFlag MUTABLE
-      override def runOrElse(scrut: Tree, matcher: Tree, scrutTp: Type, resTp: Type, hasDefault: Boolean) = matcher match {
-        case Function(List(x: ValDef), body) =>
-          matchRes.info = if (resTp ne NoType) resTp.widen else AnyClass.tpe // we don't always know resTp, and it might be AnyVal, in which case we can't assign NULL
-          if (dontStore(resTp)) matchRes resetFlag MUTABLE  // don't assign to Unit-typed var's, in fact, make it a val -- conveniently also works around SI-5245
-          BLOCK(
-            VAL(zeroSym)   === REF(NoneModule), // TODO: can we just get rid of explicitly emitted zero? don't know how to do that as a local rewrite...
-            VAL(x.symbol)  === scrut, // reuse the symbol of the function's argument to avoid creating a fresh one and substituting it for x.symbol in body -- the owner structure is repaired by fixerUpper
-            VAL(matchRes)  === mkZero(matchRes.info), // must cast to deal with GADT typing, hence the private mkZero above
-            VAL(keepGoing) === TRUE,
-            body,
-            if(hasDefault) REF(matchRes)
-            else (IF (REF(keepGoing)) THEN MATCHERROR(REF(x.symbol)) ELSE REF(matchRes))
-          )
+      override def runOrElse(scrut: Tree, matcher: Tree, scrutTp: Type, resTp: Type, hasDefault: Boolean) = {
+        val Function(List(x: ValDef), body) = matcher
+        matchRes.info = if (resTp ne NoType) resTp.widen else AnyClass.tpe // we don't always know resTp, and it might be AnyVal, in which case we can't assign NULL
+        if (dontStore(resTp)) matchRes resetFlag MUTABLE  // don't assign to Unit-typed var's, in fact, make it a val -- conveniently also works around SI-5245
+        BLOCK(
+          VAL(zeroSym)   === REF(NoneModule), // TODO: can we just get rid of explicitly emitted zero? don't know how to do that as a local rewrite...
+          VAL(x.symbol)  === scrut, // reuse the symbol of the function's argument to avoid creating a fresh one and substituting it for x.symbol in body -- the owner structure is repaired by fixerUpper
+          VAL(matchRes)  === mkZero(matchRes.info), // must cast to deal with GADT typing, hence the private mkZero above
+          VAL(keepGoing) === TRUE,
+          body,
+          if(hasDefault) REF(matchRes)
+          else (IF (REF(keepGoing)) THEN MATCHERROR(REF(x.symbol)) ELSE REF(matchRes))
+        )
       }
 
       // only used to wrap the RHS of a body
@@ -1482,19 +1480,18 @@ defined class Foo */
     }
 
     object vpmName {
-      val one       = "one".toTermName
-      val drop      = "drop".toTermName
-      val flatMap   = "flatMap".toTermName
-      val get       = "get".toTermName
-      val guard     = "guard".toTermName
-      val isEmpty   = "isEmpty".toTermName
-      val orElse    = "orElse".toTermName
-      val outer     = "<outer>".toTermName
-      val runOrElse = "runOrElse".toTermName
-      val zero      = "zero".toTermName
+      val one       = newTermName("one")
+      val drop      = newTermName("drop")
+      val flatMap   = newTermName("flatMap")
+      val get       = newTermName("get")
+      val guard     = newTermName("guard")
+      val isEmpty   = newTermName("isEmpty")
+      val orElse    = newTermName("orElse")
+      val outer     = newTermName("<outer>")
+      val runOrElse = newTermName("runOrElse")
+      val zero      = newTermName("zero")
 
-      def counted(str: String, i: Int) = (str+i).toTermName
-      def tupleIndex(i: Int) = ("_"+i).toTermName
+      def counted(str: String, i: Int) = newTermName(str+i)
     }
 
 
@@ -1503,7 +1500,7 @@ defined class Foo */
     trait CommonCodeGen extends AbsCodeGen { self: CommonCodeGen with MatchingStrategyGen with MonadInstGen =>
       def fun(arg: Symbol, body: Tree): Tree           = Function(List(ValDef(arg)), body)
       def genTypeApply(tfun: Tree, args: Type*): Tree  = if(args contains NoType) tfun else TypeApply(tfun, args.toList map TypeTree)
-      def tupleSel(binder: Symbol)(i: Int): Tree       = (REF(binder) DOT vpmName.tupleIndex(i)) // make tree that accesses the i'th component of the tuple referenced by binder
+      def tupleSel(binder: Symbol)(i: Int): Tree       = (REF(binder) DOT nme.productAccessorName(i)) // make tree that accesses the i'th component of the tuple referenced by binder
       def index(tgt: Tree)(i: Int): Tree               = tgt APPLY (LIT(i))
       def drop(tgt: Tree)(n: Int): Tree                = (tgt DOT vpmName.drop) (LIT(n))
       def _equals(checker: Tree, binder: Symbol): Tree = checker MEMBER_== REF(binder)          // NOTE: checker must be the target of the ==, that's the patmat semantics for ya

@@ -85,9 +85,9 @@ abstract class Inliners extends SubComponent {
 
     /* fresh name counter */
     val fresh = perRunCaches.newMap[String, Int]() withDefaultValue 0
-    def freshName(s: String) = {
+    def freshName(s: String): TermName = {
       fresh(s) += 1
-      s + fresh(s)
+      newTermName(s + fresh(s))
     }
 
     private def hasInline(sym: Symbol)    = sym hasAnnotation ScalaInlineClass
@@ -102,11 +102,21 @@ abstract class Inliners extends SubComponent {
         debuglog("Analyzing " + cls)
 
         this.currentIClazz = cls
-        cls.methods filterNot (_.symbol.isConstructor) foreach analyzeMethod
+        val ms = cls.methods filterNot { _.symbol.isConstructor }
+        ms foreach { im =>
+          if(hasInline(im.symbol)) {
+            log("Not inlining into " + im.symbol.originalName.decode + " because it is marked @inline.")
+          } else if(im.hasCode) {
+            analyzeMethod(im)
+          }
+        }
       }
 
-    val tfa   = new analysis.MethodTFA()
+    val tfa   = new analysis.MTFAGrowable()
     tfa.stat  = global.opt.printStats
+    val staleOut = new mutable.ListBuffer[BasicBlock]
+    val splicedBlocks = mutable.Set.empty[BasicBlock]
+    val staleIn  = mutable.Set.empty[BasicBlock]
 
     // how many times have we already inlined this method here?
     private val inlinedMethodCount = perRunCaches.newMap[Symbol, Int]() withDefaultValue 0
@@ -208,34 +218,35 @@ abstract class Inliners extends SubComponent {
       import scala.util.control.Breaks._
       do {
         retry = false
-        if (caller.inline) {
-          log("Not inlining into " + caller.sym.originalName.decode + " because it is marked @inline.")
-        }
-        else if (caller.m.hasCode) {
-          log("Analyzing " + m + " count " + count + " with " + caller.length + " blocks")
-          tfa init m
-          tfa.run
-          caller.m.linearizedBlocks() foreach { bb =>
-            info = tfa in bb
+        log("Analyzing " + m + " count " + count + " with " + caller.length + " blocks")
+        tfa.reinit(m, staleOut.toList, splicedBlocks, staleIn)
+        tfa.run
+        staleOut.clear()
+        splicedBlocks.clear()
+        staleIn.clear()
 
-            breakable {
-              for (i <- bb) {
-                i match {
-                  // Dynamic == normal invocations
-                  // Static(true) == calls to private members
-                  case CALL_METHOD(msym, Dynamic | Static(true)) if !msym.isConstructor =>
-                    if (analyzeInc(msym, i, bb))
-                      break
-                  case _ => ()
-                }
-                info = tfa.interpret(info, i)
+        caller.m.linearizedBlocks() foreach { bb =>
+          info = tfa in bb
+
+          breakable {
+            for (i <- bb) {
+              i match {
+                // Dynamic == normal invocations
+                // Static(true) == calls to private members
+                case CALL_METHOD(msym, Dynamic | Static(true)) if !msym.isConstructor =>
+                  if (analyzeInc(msym, i, bb)) {
+                    break
+                  }
+                case _ => ()
               }
+              info = tfa.interpret(info, i)
             }
           }
 
-          if (tfa.stat)
-            log(m.symbol.fullName + " iterations: " + tfa.iterations + " (size: " + caller.length + ")")
         }
+
+        if (tfa.stat)
+          log(m.symbol.fullName + " iterations: " + tfa.iterations + " (size: " + caller.length + ")")
       }
       while (retry && count < MAX_INLINE_RETRY)
 
@@ -343,12 +354,15 @@ abstract class Inliners extends SubComponent {
        *  The instruction must be a CALL_METHOD.
        */
       def doInline(block: BasicBlock, instr: Instruction) {
+
+        staleOut += block
+
         val targetPos = instr.pos
         log("Inlining " + inc.m + " in " + caller.m + " at pos: " + posToStr(targetPos))
 
         def blockEmit(i: Instruction) = block.emit(i, targetPos)
         def newLocal(baseName: String, kind: TypeKind) =
-          new Local(caller.sym.newVariable(targetPos, freshName(baseName)), kind, false)
+          new Local(caller.sym.newVariable(freshName(baseName), targetPos), kind, false)
 
         val a = new analysis.MethodTFA(inc.m)
 
@@ -400,7 +414,7 @@ abstract class Inliners extends SubComponent {
 
         /** alfa-rename `l` in caller's context. */
         def dupLocal(l: Local): Local = {
-          val sym = caller.sym.newVariable(l.sym.pos, freshName(l.sym.name.toString))
+          val sym = caller.sym.newVariable(freshName(l.sym.name.toString), l.sym.pos)
           // sym.setInfo(l.sym.tpe)
           val dupped = new Local(sym, l.kind, false)
           inlinedLocals(l) = dupped
@@ -478,7 +492,8 @@ abstract class Inliners extends SubComponent {
         block.close
 
         // duplicate the other blocks in the callee
-        inc.m.linearizedBlocks() foreach { bb => 
+        val calleeLin = inc.m.linearizedBlocks()
+        calleeLin foreach { bb =>
           var info = a in bb
           def emitInlined(i: Instruction) = inlinedBlock(bb).emit(i, targetPos)
           def emitDrops(toDrop: Int)      = info.stack.types drop toDrop foreach (t => emitInlined(DROP(t)))
@@ -502,6 +517,9 @@ abstract class Inliners extends SubComponent {
 
         afterBlock emit instrAfter
         afterBlock.close
+
+        staleIn        += afterBlock
+        splicedBlocks ++= (calleeLin map inlinedBlock)
 
         // add exception handlers of the callee
         caller addHandlers (inc.handlers map translateExh)
