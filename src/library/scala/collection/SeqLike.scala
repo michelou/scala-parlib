@@ -159,7 +159,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr]
       if (!hasNext)
         Iterator.empty.next
 
-      val result = (self.newBuilder ++= elms).result
+      val result = (self.newBuilder ++= elms.toList).result
       var i = idxs.length - 2
       while(i >= 0 && idxs(i) >= idxs(i+1))
         i -= 1
