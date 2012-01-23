@@ -911,7 +911,10 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
           }
           if (tree.isType)
             adaptType()
-          else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
+          else if (inExprModeButNot(mode, FUNmode) && tree.symbol != null && tree.symbol.isMacro && !tree.isDef) {
+            val tree1 = expandMacro(tree)
+            if (tree1.isErroneous) tree1 else typed(tree1, mode, pt) 
+          } else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
             adaptConstrPattern()
           else if (inAllModes(mode, EXPRmode | FUNmode) &&
             !tree.tpe.isInstanceOf[MethodType] &&
@@ -2835,9 +2838,22 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
     def packSymbols(hidden: List[Symbol], tp: Type): Type =
       if (hidden.isEmpty) tp
       else existentialTransform(hidden, tp)(existentialAbstraction)
+      
+    def isReferencedFrom(ctx: Context, sym: Symbol): Boolean =
+      ctx.owner.isTerm && 
+      (ctx.scope.exists { dcl => dcl.isInitialized && (dcl.info contains sym) }) || 
+      {
+        var ctx1 = ctx.outer
+        while ((ctx1 != NoContext) && (ctx1.scope eq ctx.scope)) ctx1 = ctx1.outer
+        (ctx1 != NoContext) && isReferencedFrom(ctx1, sym)
+      }
 
     def isCapturedExistential(sym: Symbol) =
-      sym hasAllFlags (EXISTENTIAL | CAPTURED)  // todo refine this
+      (sym hasAllFlags (EXISTENTIAL | CAPTURED)) && {
+      val start = startTimer(isReferencedNanos)
+      try !isReferencedFrom(context, sym)
+      finally stopTimer(isReferencedNanos, start)
+    }
 
     def packCaptured(tpe: Type): Type = {
       val captured = mutable.Set[Symbol]()
@@ -3471,9 +3487,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
                 // (calling typed1 more than once for the same tree)
                 if (checked ne res) typed { atPos(tree.pos)(checked) }
                 else res
-              } else if ((mode & FUNmode) == 0 && fun2.hasSymbol && fun2.symbol.isMacro)
-                typed1(macroExpand(res), mode, pt)
-              else
+              } else
                 res
             case ex: TypeError =>
               fun match {
@@ -3483,7 +3497,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
                   if (treeInfo.isVariableOrGetter(qual1)) {
                     stopTimer(failedOpEqNanos, opeqStart)
                     convertToAssignment(fun, qual1, name, args, ex)
-                  } 
+                  }
                   else {
                     stopTimer(failedApplyNanos, appStart)
                     reportTypeError(fun.pos, ex)
@@ -3800,6 +3814,9 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
 
           var cx = startingIdentContext
           while (defSym == NoSymbol && cx != NoContext) {
+            // !!! Shouldn't the argument to compileSourceFor be cx, not context?
+            // I can't tell because those methods do nothing in the standard compiler,
+            // presumably they are overridden in the IDE.
             currentRun.compileSourceFor(context.asInstanceOf[analyzer.Context], name)
             pre = cx.enclClass.prefix
             defEntry = cx.scope.lookupEntry(name)
@@ -3914,9 +3931,18 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
                 // Avoiding some spurious error messages: see SI-2388.
                 if (reporter.hasErrors && (name startsWith tpnme.ANON_CLASS_NAME)) ()
                 else {
-                  val similar = (
-                    // name length check to limit unhelpful suggestions for e.g. "x" and "b1"
-                    if (name.length > 2) {
+                  // This laborious determination arrived at to keep the tests working.
+                  val calcSimilar = (
+                    name.length > 2 && (
+                         startingIdentContext.reportGeneralErrors
+                      || startingIdentContext.enclClassOrMethod.reportGeneralErrors
+                    )
+                  )
+                  // avoid calculating if we're in "silent" mode.
+                  // name length check to limit unhelpful suggestions for e.g. "x" and "b1"
+                  val similar = {
+                    if (!calcSimilar) ""
+                    else {
                       val allowed = (
                         startingIdentContext.enclosingContextChain
                             flatMap (ctx => ctx.scope.toList ++ ctx.imports.flatMap(_.allImportedSymbols))
@@ -3929,8 +3955,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
                       )
                       similarString("" + name, allowedStrings)
                     }
-                    else ""
-                  )
+                  }
                   error(tree.pos, "not found: "+decodeWithKind(name, context.owner) + similar)
                 }
               }
@@ -4428,6 +4453,15 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
           pendingTreeTypes = pendingTreeTypes.tail
         }
       }
+    }
+
+    def expandMacro(tree: Tree): Tree = try {
+      macroExpand(tree) match {
+        case t: Tree => t
+        case t => errorTree(tree, "macros must return a compiler-specific tree; returned class is: " + t.getClass)
+      }
+    } catch {
+      case ex: MacroExpandError => errorTree(tree, ex.msg)
     }
 
     def atOwner(owner: Symbol): Typer =
