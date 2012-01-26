@@ -21,13 +21,13 @@ case class TestRunParams(val scalaCheckParentClassLoader: ScalaClassLoader)
 trait DirectRunner {
 
   def fileManager: FileManager
-  
+
   import PartestDefaults.numActors
-  
+
   def denotesTestFile(arg: String) = Path(arg).hasExtension("scala", "res", "xml")
   def denotesTestDir(arg: String)  = Path(arg).ifDirectory(_.files.nonEmpty) exists (x => x)
   def denotesTestPath(arg: String) = denotesTestDir(arg) || denotesTestFile(arg)
-  
+
   /** No duplicate, no empty directories, don't mess with this unless
    *  you like partest hangs.
    */
@@ -52,11 +52,19 @@ trait DirectRunner {
     val kindFiles = onlyValidTestPaths(_kindFiles)
     val groupSize = (kindFiles.length / numActors) + 1
 
-    val consFM = new ConsoleFileManager()
-    val scalacheckURL = PathSettings.scalaCheck.toURL
-    val libURLs = consFM.getLibFiles map (_.toURL)
-    val scalaCheckParentClassLoader = ScalaClassLoader.fromURLs(scalacheckURL :: libURLs)
+    // @partest maintainer: we cannot create a fresh file manager here
+    // since the FM must respect --buildpath and --classpath from the command line
+    // for example, see how it's done in ReflectiveRunner
+    //val consFM = new ConsoleFileManager
+    //import consFM.{ latestCompFile, latestLibFile, latestPartestFile }
+    val latestCompFile = new File(fileManager.LATEST_COMP);
+    val latestLibFile = new File(fileManager.LATEST_LIB);
+    val latestPartestFile = new File(fileManager.LATEST_PARTEST);
 
+    val scalacheckURL = PathSettings.scalaCheck.toURL
+    val scalaCheckParentClassLoader = ScalaClassLoader.fromURLs(
+      List(scalacheckURL, latestCompFile.toURI.toURL, latestLibFile.toURI.toURL, latestPartestFile.toURI.toURL)
+    )
     Output.init()
 
     val workers = kindFiles.grouped(groupSize).toList map { toTest =>

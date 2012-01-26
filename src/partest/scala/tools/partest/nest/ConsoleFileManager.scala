@@ -158,9 +158,13 @@ class ConsoleFileManager extends FileManager {
     }
     
     LATEST_LIB = latestLibFile.getAbsolutePath
+    LATEST_COMP = latestCompFile.getAbsolutePath
+    LATEST_PARTEST = latestPartestFile.getAbsolutePath
   }
   
   var LATEST_LIB: String = ""
+  var LATEST_COMP: String = ""
+  var LATEST_PARTEST: String = ""
 
   var latestFile: File = _
   private var latestLibFile: File = _
