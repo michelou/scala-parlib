@@ -159,11 +159,13 @@ class ConsoleFileManager extends FileManager {
     
     LATEST_LIB = latestLibFile.getAbsolutePath
     LATEST_COMP = latestCompFile.getAbsolutePath
+    LATEST_ACTORS = (latestLibFile.parent / "scala-actors.jar").getAbsolutePath
     LATEST_PARTEST = latestPartestFile.getAbsolutePath
   }
   
   var LATEST_LIB: String = ""
   var LATEST_COMP: String = ""
+  var LATEST_ACTORS: String = ""
   var LATEST_PARTEST: String = ""
 
   var latestFile: File = _
@@ -179,13 +181,13 @@ class ConsoleFileManager extends FileManager {
   // initialize above fields
   findLatest()
 
-  def getLibFiles: List[io.Path] = List(
+  def getDirectLibFiles: List[io.Path] = List(
     latestCompFile, latestLibFile,
     latestParallelFile, latestActorsFile,
     latestPartestFile
   )
 
-  def getAllLibFiles: List[io.Path] = List(
+  def getReflectiveLibFiles: List[io.Path] = List(
     latestCompFile, latestLibFile,
     latestParallelFile, latestActorsFile,
     latestPartestFile,

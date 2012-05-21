@@ -708,8 +708,6 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
       }
     }
 
-    def isCodeType(tpe: Type) = tpe.typeSymbol isNonBottomSubClass CodeClass
-
     /** Perform the following adaptations of expression, pattern or type `tree` wrt to
      *  given mode `mode` and given prototype `pt`:
      *  (-1) For expressions with annotated types, let AnnotationCheckers decide what to do
@@ -1406,7 +1404,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
     def typedClassDef(cdef: ClassDef): Tree = {
 //      attributes(cdef)
       val clazz = cdef.symbol
-      val typedMods = removeAnnotations(cdef.mods)
+      val typedMods = typedModifiers(cdef.mods)
       assert(clazz != NoSymbol, cdef)
       reenterTypeParams(cdef.tparams)
       val tparams1 = cdef.tparams mapConserve (typedTypeDef)
@@ -1443,7 +1441,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
         linkedClass.info.decl(nme.CONSTRUCTOR).alternatives foreach (_.initialize)
 
       val clazz     = mdef.symbol.moduleClass
-      val typedMods = removeAnnotations(mdef.mods)
+      val typedMods = typedModifiers(mdef.mods)
       assert(clazz != NoSymbol, mdef)
       val impl1 = typerReportAnyContextErrors(context.make(mdef.impl, clazz, newScope)) {
         _.typedTemplate(mdef.impl, {
@@ -1543,8 +1541,17 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
 
     /** Remove definition annotations from modifiers (they have been saved
      *  into the symbol's ``annotations'' in the type completer / namer)
+     *
+     *  However reification does need annotation definitions to proceed.
+     *  Unfortunately, AnnotationInfo doesn't provide enough info to reify it in general case.
+     *  The biggest problem is with the "atp: Type" field, which cannot be reified in some situations
+     *  that involve locally defined annotations. See more about that in Reifiers.scala.
+     *
+     *  That's why the original tree gets saved into ``original'' field of AnnotationInfo (happens elsewhere).
+     *  The field doesn't get pickled/unpickled and exists only during a single compilation run.
+     *  This simultaneously allows us to reify annotations and to preserve backward compatibility.
      */
-    def removeAnnotations(mods: Modifiers): Modifiers =
+    def typedModifiers(mods: Modifiers): Modifiers =
       mods.copy(annotations = Nil) setPositions mods.positions
 
     /**
@@ -1555,7 +1562,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
 //      attributes(vdef)
       val sym = vdef.symbol.initialize
       val typer1 = constrTyperIf(sym.isParameter && sym.owner.isConstructor)
-      val typedMods = removeAnnotations(vdef.mods)
+      val typedMods = typedModifiers(vdef.mods)
 
       // complete lazy annotations
       val annots = sym.annotations
@@ -1766,7 +1773,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
       var tpt1 = checkNoEscaping.privates(meth, typedType(ddef.tpt))
       checkNonCyclic(ddef, tpt1)
       ddef.tpt.setType(tpt1.tpe)
-      val typedMods = removeAnnotations(ddef.mods)
+      val typedMods = typedModifiers(ddef.mods)
       var rhs1 =
         if (ddef.name == nme.CONSTRUCTOR && !ddef.symbol.hasStaticFlag) { // need this to make it possible to generate static ctors
           if (!meth.isPrimaryConstructor &&
@@ -1815,7 +1822,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
       tdef.symbol.initialize
       reenterTypeParams(tdef.tparams)
       val tparams1 = tdef.tparams mapConserve typedTypeDef
-      val typedMods = removeAnnotations(tdef.mods)
+      val typedMods = typedModifiers(tdef.mods)
       // complete lazy annotations
       val annots = tdef.symbol.annotations
 
@@ -1993,8 +2000,6 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
      */
     def typedFunction(fun: Function, mode: Int, pt: Type): Tree = {
       val numVparams = fun.vparams.length
-      val codeExpected = !forMSIL && (pt.typeSymbol isNonBottomSubClass CodeClass)
-
       if (numVparams > definitions.MaxFunctionArity)
         return MaxFunctionArityError(fun)
 
@@ -2011,7 +2016,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
         else
           (FunctionClass(numVparams), fun.vparams map (x => NoType), WildcardType)
 
-      val (clazz, argpts, respt) = decompose(if (codeExpected) pt.normalize.typeArgs.head else pt)
+      val (clazz, argpts, respt) = decompose(pt)
       if (argpts.lengthCompare(numVparams) != 0)
         WrongNumberOfParametersError(fun, argpts)
       else {
@@ -2021,7 +2026,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
               if (isFullyDefined(argpt)) argpt
               else {
                 fun match {
-                  case etaExpansion(vparams, fn, args) if !codeExpected =>
+                  case etaExpansion(vparams, fn, args) =>
                     silent(_.typed(fn, forFunMode(mode), pt)) match {
                       case SilentResultValue(fn1) if context.undetparams.isEmpty =>
                         // if context,undetparams is not empty, the function was polymorphic,
@@ -2053,13 +2058,8 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
         val restpe = packedType(body1, fun.symbol).deconst.resultType
         val funtpe = typeRef(clazz.tpe.prefix, clazz, formals :+ restpe)
 //        body = checkNoEscaping.locals(context.scope, restpe, body)
-        val fun1 = treeCopy.Function(fun, vparams, body1).setType(funtpe)
-        if (codeExpected) lifted(fun1) else fun1
-      }
+        treeCopy.Function(fun, vparams, body1).setType(funtpe)
     }
-
-    def lifted(tree: Tree): Tree = typedPos(tree.pos) {
-      Apply(Select(Ident(CodeModule), nme.lift_), List(tree))
     }
 
     def typedRefinement(stats: List[Tree]) {
@@ -2779,7 +2779,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
             }
 
             if (hasError) annotationError
-            else AnnotationInfo(annType, List(), nvPairs map {p => (p._1, p._2.get)}).setPos(ann.pos)
+            else AnnotationInfo(annType, List(), nvPairs map {p => (p._1, p._2.get)}).setOriginal(ann).setPos(ann.pos)
           }
         } else if (requireJava) {
           reportAnnotationError(NestedAnnotationError(ann, annType))
@@ -2819,7 +2819,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
 
           def annInfo(t: Tree): AnnotationInfo = t match {
             case Apply(Select(New(tpt), nme.CONSTRUCTOR), args) =>
-              AnnotationInfo(annType, args, List()).setPos(t.pos)
+              AnnotationInfo(annType, args, List()).setOriginal(ann).setPos(t.pos)
 
             case Block(stats, expr) =>
               context.warning(t.pos, "Usage of named or default arguments transformed this annotation\n"+
@@ -2853,7 +2853,34 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
 
     def isRawParameter(sym: Symbol) = // is it a type parameter leaked by a raw type?
       sym.isTypeParameter && sym.owner.isJavaDefined
+    
+    /** If we map a set of hidden symbols to their existential bounds, we
+     *  have a problem: the bounds may themselves contain references to the
+     *  hidden symbols.  So this recursively calls existentialBound until
+     *  the typeSymbol is not amongst the symbols being hidden.
+     */
+    def existentialBoundsExcludingHidden(hidden: List[Symbol]): Map[Symbol, Type] = {
+      def safeBound(t: Type): Type =
+        if (hidden contains t.typeSymbol) safeBound(t.typeSymbol.existentialBound.bounds.hi) else t
 
+      def hiBound(s: Symbol): Type = safeBound(s.existentialBound.bounds.hi) match {
+        case tp @ RefinedType(parents, decls) =>
+          val parents1 = parents mapConserve safeBound
+          if (parents eq parents1) tp
+          else copyRefinedType(tp, parents1, decls)
+        case tp => tp
+      }
+
+      (hidden map { s =>
+        // Hanging onto lower bound in case anything interesting
+        // happens with it.
+        (s, s.existentialBound match {
+          case TypeBounds(lo, hi) => TypeBounds(lo, hiBound(s))
+          case _                  => hiBound(s)
+        })
+      }).toMap
+    }
+    
     /** Given a set `rawSyms` of term- and type-symbols, and a type
      *  `tp`, produce a set of fresh type parameters and a type so that
      *  it can be abstracted to an existential type. Every type symbol
@@ -2871,12 +2898,13 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
      *  only the type of the Ident is changed.
      */
     protected def existentialTransform[T](rawSyms: List[Symbol], tp: Type)(creator: (List[Symbol], Type) => T): T = {
+      val allBounds = existentialBoundsExcludingHidden(rawSyms)
       val typeParams: List[Symbol] = rawSyms map { sym =>
         val name = sym.name match {
           case x: TypeName  => x
-          case x            => newTypeName(x + ".type")
+          case x            => nme.singletonName(x)
         }
-        val bound      = sym.existentialBound
+        val bound      = allBounds(sym)
         val sowner     = if (isRawParameter(sym)) context.owner else sym.owner
         val quantified = sowner.newExistential(name, sym.pos)
 
@@ -3723,7 +3751,7 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
             return typed(treeCopy.Select(tree, qual1, name), mode, pt)
         }
         if (!reallyExists(sym)) {
-          if (context.owner.toplevelClass.isJavaDefined && name.isTypeName) {
+          if (context.owner.enclosingTopLevelClass.isJavaDefined && name.isTypeName) {
             val tree1 = atPos(tree.pos) { gen.convertToSelectFromType(qual, name)  }
             if (tree1 != EmptyTree) return typed1(tree1, mode, pt)
           }

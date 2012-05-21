@@ -58,7 +58,6 @@ self =>
     new IterableSplitter[K] {
       i =>
       val iter = s
-      var signalDelegate: Signalling = IdleSignalling
       def hasNext = iter.hasNext
       def next() = iter.next._1
       def split = {
@@ -76,7 +75,6 @@ self =>
     new IterableSplitter[V] {
       i =>
       val iter = s
-      var signalDelegate: Signalling = IdleSignalling
       def hasNext = iter.hasNext
       def next() = iter.next._2
       def split = {

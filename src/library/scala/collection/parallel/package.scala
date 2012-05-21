@@ -203,6 +203,7 @@ package object parallel {
   PARNO@*/
 }
 
+
 package parallel {
   trait FactoryOps[From, Elem, To] {
     trait Otherwise[R] {
@@ -233,7 +234,19 @@ package parallel {
   }
 
   /* classes */
-
+  
+  trait CombinerFactory[U, Repr] {
+    /** Provides a combiner used to construct a collection. */
+    def apply(): Combiner[U, Repr]
+    /** The call to the `apply` method can create a new combiner each time.
+     *  If it does, this method returns `false`.
+     *  The same combiner factory may be used each time (typically, this is
+     *  the case for concurrent collections, which are thread safe).
+     *  If so, the method returns `true`.
+     */
+    def doesShareCombiners: Boolean
+  }
+  
   /** Composite throwable - thrown when multiple exceptions are thrown at the same time. */
   final case class CompositeThrowable(
     val throwables: Set[Throwable]
@@ -247,8 +260,9 @@ package parallel {
    *  Automatically forwards the signal delegate when splitting.
    */
   private[parallel] class BufferSplitter[T]
-    (private val buffer: collection.mutable.ArrayBuffer[T], private var index: Int, private val until: Int, var signalDelegate: collection.generic.Signalling)
+  (private val buffer: collection.mutable.ArrayBuffer[T], private var index: Int, private val until: Int, _sigdel: collection.generic.Signalling)
   extends IterableSplitter[T] {
+    signalDelegate = _sigdel
     def hasNext = index < until
     def next = {
       val r = buffer(index)
@@ -302,22 +316,23 @@ package parallel {
    *  the receiver (which will be the return value).
    */
   private[parallel] abstract class BucketCombiner[-Elem, +To, Buck, +CombinerType <: BucketCombiner[Elem, To, Buck, CombinerType]]
-    (private val bucketnumber: Int)
+  (private val bucketnumber: Int)
   extends Combiner[Elem, To] {
   //self: EnvironmentPassingCombiner[Elem, To] =>
     protected var buckets: Array[UnrolledBuffer[Buck]] @uncheckedVariance = new Array[UnrolledBuffer[Buck]](bucketnumber)
     protected var sz: Int = 0
-
+    
     def size = sz
-
+    
     def clear() = {
       buckets = new Array[UnrolledBuffer[Buck]](bucketnumber)
       sz = 0
     }
-
+    
     def beforeCombine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]) {}
+    
     def afterCombine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]) {}
-
+    
     def combine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]): Combiner[N, NewTo] = {
       if (this eq other) this
       else other match {

@@ -21,6 +21,7 @@ class AntRunner extends DirectRunner {
     var CLASSPATH: String = _
     var LATEST_LIB: String = _
     var LATEST_COMP: String = _
+    var LATEST_ACTORS: String = _
     var LATEST_PARTEST: String = _
     val testRootPath: String = "test"
     val testRootDir: Directory = Directory(testRootPath)
