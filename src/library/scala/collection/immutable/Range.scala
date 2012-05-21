@@ -11,8 +11,11 @@ package scala.collection.immutable
 
 /*@PAR*/
 import scala.collection.parallel.immutable.ParRange
+<<<<<<< HEAD
 /*PAR@*/
 import annotation.bridge
+=======
+>>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 
 /** The `Range` class represents integer values in range
  *  ''[start;end)'' with non-zero step value `step`.
@@ -81,9 +84,9 @@ extends collection.AbstractSeq[Int]
   }
   final val lastElement     = start + (numRangeElements - 1) * step
   final val terminalElement = start + numRangeElements * step
-  
+
   override def last = if (isEmpty) Nil.last else lastElement
-  
+
   protected def copy(start: Int, end: Int, step: Int): Range = new Range(start, end, step)
 
   /** Create a new range with the `start` and `end` values of this range and
@@ -97,14 +100,14 @@ extends collection.AbstractSeq[Int]
 
   override def size = length
   override def length = if (numRangeElements < 0) fail() else numRangeElements
-  
+
   private def description = "%d %s %d by %s".format(start, if (isInclusive) "to" else "until", end, step)
   private def fail() = throw new IllegalArgumentException(description + ": seqs cannot contain more than Int.MaxValue elements.")
   private def validateMaxLength() {
     if (numRangeElements < 0)
       fail()
   }
-  
+
   def validateRangeBoundaries(f: Int => Any): Boolean = {
     validateMaxLength()
 
@@ -125,7 +128,7 @@ extends collection.AbstractSeq[Int]
     if (idx < 0 || idx >= numRangeElements) throw new IndexOutOfBoundsException(idx.toString)
     else start + (step * idx)
   }
-  
+
   @inline final override def foreach[@specialized(Unit) U](f: Int => U) {
     if (validateRangeBoundaries(f)) {
       var i = start
@@ -313,7 +316,7 @@ object Range {
       // number of full-sized jumps.
       val hasStub      = isInclusive || (gap % step != 0)
       val result: Long = jumps + ( if (hasStub) 1 else 0 )
-    
+
       if (result > scala.Int.MaxValue) -1
       else result.toInt
     }
@@ -332,16 +335,16 @@ object Range {
    */
   def apply(start: Int, end: Int, step: Int): Range = new Range(start, end, step)
 
-  /** Make an range from `start` to `end` inclusive with step value 1.
+  /** Make a range from `start` until `end` (exclusive) with step value 1.
    */
   def apply(start: Int, end: Int): Range = new Range(start, end, 1)
 
-  /** Make an inclusive range from start to end with given step value.
+  /** Make an inclusive range from `start` to `end` with given step value.
    * @note step != 0
    */
   @inline def inclusive(start: Int, end: Int, step: Int): Range.Inclusive = new Inclusive(start, end, step)
 
-  /** Make an inclusive range from start to end with step value 1.
+  /** Make an inclusive range from `start` to `end` with step value 1.
    */
   @inline def inclusive(start: Int, end: Int): Range.Inclusive = new Inclusive(start, end, 1)
 
@@ -402,11 +405,8 @@ object Range {
     def apply(start: Int, end: Int, step: Int) = NumericRange(start, end, step)
     def inclusive(start: Int, end: Int, step: Int) = NumericRange.inclusive(start, end, step)
   }
-
-  @deprecated("use Range instead", "2.9.0")
-  trait ByOne extends Range {
-//    @bridge override def foreach[@specialized(Unit) U](f: Int => U) =
-//      super.foreach(f)
-  }
 }
+<<<<<<< HEAD
  
+=======
+>>>>>>> f406550146250f5a6036d3d778582efa6d68252a

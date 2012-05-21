@@ -57,6 +57,7 @@ trait DirectRunner {
     // for example, see how it's done in ReflectiveRunner
     //val consFM = new ConsoleFileManager
     //import consFM.{ latestCompFile, latestLibFile, latestPartestFile }
+<<<<<<< HEAD
     ////val latestCompFile = new File(fileManager.LATEST_COMP)
     ////val latestLibFile = new File(fileManager.LATEST_LIB)
     ////val latestPartestFile = new File(fileManager.LATEST_PARTEST)
@@ -70,6 +71,17 @@ trait DirectRunner {
       case fm => List(fm.LATEST_COMP, fm.LATEST_LIB, fm.LATEST_ACTORS, fm.LATEST_PARTEST) map (new File(_).toURI.toURL)
     })
     val scalaCheckParentClassLoader = ScalaClassLoader.fromURLs(urls)
+=======
+    val latestCompFile = new File(fileManager.LATEST_COMP)
+    val latestLibFile = new File(fileManager.LATEST_LIB)
+    val latestPartestFile = new File(fileManager.LATEST_PARTEST)
+    val latestActorsFile = new File(fileManager.LATEST_ACTORS)
+
+    val scalacheckURL = PathSettings.scalaCheck.toURL
+    val scalaCheckParentClassLoader = ScalaClassLoader.fromURLs(
+      scalacheckURL :: (List(latestCompFile, latestLibFile, latestActorsFile, latestPartestFile).map(_.toURI.toURL))
+    )
+>>>>>>> f406550146250f5a6036d3d778582efa6d68252a
     Output.init()
 
     val workers = kindFiles.grouped(groupSize).toList map { toTest =>

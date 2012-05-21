@@ -18,7 +18,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
   import global._
   import definitions.{ PredefModule, RootClass, AnyClass, AnyRefClass, ScalaPackage, JavaLangPackage, getModuleIfDefined }
   type ExecResult = Any
-  import intp.{ debugging, afterTyper }
+  import intp.{ debugging }
 
   // verbosity goes up with consecutive tabs
   private var verbosity: Int = 0
@@ -61,7 +61,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
     def packageNames  = packages map tos
     def aliasNames    = aliases map tos
   }
-  
+
   object NoTypeCompletion extends TypeMemberCompletion(NoType) {
     override def memberNamed(s: String) = NoSymbol
     override def members = Nil
@@ -165,11 +165,11 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
     override def follow(id: String): Option[CompletionAware] = {
       if (!completions(0).contains(id))
         return None
-      
+
       val tpe = intp typeOfExpression id
       if (tpe == NoType)
         return None
-      
+
       def default = Some(TypeMemberCompletion(tpe))
 
       // only rebinding vals in power mode for now.
@@ -194,14 +194,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
 
   // literal Ints, Strings, etc.
   object literals extends CompletionAware {
-    def simpleParse(code: String): Tree = {
-      val unit    = new CompilationUnit(new util.BatchSourceFile("<console>", code))
-      val scanner = new syntaxAnalyzer.UnitParser(unit)
-      val tss     = scanner.templateStatSeq(false)._2
-
-      if (tss.size == 1) tss.head else EmptyTree
-    }
-
+    def simpleParse(code: String): Tree = newUnitParser(code).templateStats().last
     def completions(verbosity: Int) = Nil
 
     override def follow(id: String) = simpleParse(id) match {
@@ -286,19 +279,6 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
     if (parsed.isEmpty) xs map ("." + _) else xs
   }
 
-  // chasing down results which won't parse
-  def execute(line: String): Option[ExecResult] = {
-    val parsed = Parsed(line)
-    def noDotOrSlash = line forall (ch => ch != '.' && ch != '/')
-
-    if (noDotOrSlash) None  // we defer all unqualified ids to the repl.
-    else {
-      (ids executionFor parsed) orElse
-      (rootClass executionFor parsed) orElse
-      (FileCompletion executionFor line)
-    }
-  }
-
   // generic interface for querying (e.g. interpreter loop, testing)
   def completions(buf: String): List[String] =
     topLevelFor(Parsed.dotted(buf + ".", buf.length + 1))
@@ -362,15 +342,9 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
         if (!looksLikeInvocation(buf)) None
         else tryCompletion(Parsed.dotted(buf drop 1, cursor), lastResultFor)
 
-      def regularCompletion = tryCompletion(mkDotted, topLevelFor)
-      def fileCompletion    =
-        if (!looksLikePath(buf)) None
-        else tryCompletion(mkUndelimited, FileCompletion completionsFor _.buffer)
-
       def tryAll = (
                   lastResultCompletion
-           orElse regularCompletion
-           orElse fileCompletion
+           orElse tryCompletion(mkDotted, topLevelFor)
         getOrElse Candidates(cursor, Nil)
       )
 

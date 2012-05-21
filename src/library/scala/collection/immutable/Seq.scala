@@ -19,7 +19,7 @@ import parallel.immutable.ParSeq
  *  that are guaranteed immutable.
  *
  *  $seqInfo
- *  @define Coll immutable.Seq
+ *  @define Coll `immutable.Seq`
  *  @define coll immutable sequence
  */
 trait Seq[+A] extends Iterable[A]
@@ -38,7 +38,7 @@ trait Seq[+A] extends Iterable[A]
 }
 
 /** $factoryInfo
- *  @define Coll immutable.Seq
+ *  @define Coll `immutable.Seq`
  *  @define coll immutable sequence
  */
 object Seq extends SeqFactory[Seq] {
