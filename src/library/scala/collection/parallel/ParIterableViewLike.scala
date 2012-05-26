@@ -20,18 +20,12 @@ import scala.collection.GenSeq
 import scala.collection.generic.{ CanBuildFrom, SliceInterval }
 /*@PAR*/
 import scala.collection.generic.CanCombineFrom
-<<<<<<< HEAD
 /*PAR@*/
 /*@NOPAR
 import generic.CanCombineFrom
 PARNO@*/
-import immutable.ParRange
-=======
 import scala.collection.parallel.immutable.ParRange
 import language.implicitConversions
-
-
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 
 /** A template view of a non-strict view of parallel iterable collection.
  *

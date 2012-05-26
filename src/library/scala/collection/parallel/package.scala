@@ -114,18 +114,24 @@ package object parallel {
       protected[this] def parCombiner = ParIterable.newCombiner[A]
     }
 
-  implicit def genIterable2ParIterable[A](col: GenIterable[A]) =
+  implicit def genIterable2ParIterable[A, T <: GenIterable[A]](col: T) =
     new Parallelizable[A, ParIterable[A]] {
       def seq = col.seq
       protected[this] def parCombiner = ParIterable.newCombiner[A]
     }
 
-  implicit def genMap2ParIterable[A, B](col: GenMap[A, B]) =
+  implicit def genMap2ParMap[A, B](col: GenMap[A, B]) =
     new Parallelizable[(A, B), ParMap[A, B]] {
       def seq = col.seq
       protected[this] def parCombiner = ParMap.newCombiner[A, B]
     }
-
+/*
+  implicit def genSet2ParSet[A, B](col: GenSet[A]) =
+    new Parallelizable[A, ParSet[A]] {
+      def seq = col.seq
+      protected[this] def parCombiner = ParSet.newCombiner[A]
+    }
+*/
   /* immutable implicits: Iterable, Map, Seq, Set, HashMap, HashSet, Vector */
   implicit def ciIterable2ParIterable[A, Sequential <: ci.Iterable[A] with IterableLike[A, Sequential]](col: IterableLike[A, Sequential]) =
     new Parallelizable[A, pi.ParIterable[A]] {
@@ -133,7 +139,7 @@ package object parallel {
       protected[this] def parCombiner = pi.ParIterable.newCombiner[A]
     }
 
-  implicit def ciMap2ParMap[A, B, Sequential <: ci.Map[A, B] with MapLike[A, B, Sequential]](col: MapLike[A, B, Sequential]) =
+  implicit def ciMap2ParMap[A, B, Sequential <: ci.Map[A, B] with ci.MapLike[A, B, Sequential]](col: ci.MapLike[A, B, Sequential]) =
     new Parallelizable[(A, B), pi.ParMap[A, B]] {
       def seq = col
       protected[this] def parCombiner = pi.ParMap.newCombiner[A, B]
@@ -152,17 +158,17 @@ package object parallel {
     }
 
   implicit def ciHashMap2ParHashMap[A, B](col: ci.HashMap[A, B]) =
-    new Parallelizable[(A, B), pi.ParHashMap[A, B]] {
+    new CustomParallelizable[(A, B), pi.ParHashMap[A, B]] {
       def seq = col
       override def par = pi.ParHashMap.fromTrie(col)
-      protected[this] def parCombiner = pi.ParHashMap.newCombiner[A, B]
+      protected[this] override def parCombiner = pi.ParHashMap.newCombiner[A, B]
     }
 
   implicit def ciHashSet2ParHashSet[A](col: ci.HashSet[A]) =
-    new Parallelizable[A, pi.ParHashSet[A]] {
+    new CustomParallelizable[A, pi.ParHashSet[A]] {
       def seq = col
       override def par = pi.ParHashSet.fromTrie(col)
-      protected[this] def parCombiner = pi.ParHashSet.newCombiner[A]
+      protected[this] override def parCombiner = pi.ParHashSet.newCombiner[A]
     }
 
   implicit def ciVector2ParVector[A](col: ci.Vector[A]) =
@@ -178,36 +184,43 @@ package object parallel {
       protected[this] def parCombiner = pm.ParIterable.newCombiner[A]
     }
 
-  implicit def cmMap2ParMap[A, B, Sequential <: cm.Map[A, B] with MapLike[A, B, Sequential]](col: MapLike[A, B, Sequential]) =
+  implicit def cmMap2ParMap[A, B, This <: cm.Map[A, B] with cm.MapLike[A, B, This]](col: cm.MapLike[A, B, This]) =
     new Parallelizable[(A, B), pm.ParMap[A, B]] {
       def seq = col
       protected[this] def parCombiner = pm.ParMap.newCombiner[A, B]
     }
 
-  implicit def cmSeq2ParSeq[A, Sequential <: cm.Seq[A] with SeqLike[A, Sequential]](col: SeqLike[A, Sequential]) =
+  implicit def cmSeq2ParSeq[A, This <: cm.Seq[A] with cm.SeqLike[A, This]](col: cm.SeqLike[A, This]) =
     new Parallelizable[A, pm.ParSeq[A]] {
       def seq = col
       protected[this] def parCombiner = pm.ParSeq.newCombiner[A]
     }
 
-  implicit def cmSet2ParSet[A, Sequential <: cm.Set[A] with SetLike[A, Sequential]](col: SetLike[A, Sequential]) =
+  implicit def cmSet2ParSet[A, This <: cm.Set[A] with cm.SetLike[A, This]](col: cm.SetLike[A, This]) =
     new Parallelizable[A, pm.ParSet[A]] {
       def seq = col
       protected[this] def parCombiner = pm.ParSet.newCombiner[A]
     }
 
   implicit def cmHashMap2ParHashMap[A, B](col: cm.HashMap[A, B]) =
-    new Parallelizable[(A, B), pm.ParHashMap[A, B]] {
+    new CustomParallelizable[(A, B), pm.ParHashMap[A, B]] {
       def seq = col
       override def par = new pm.ParHashMap[A, B](col.hashTableContents)
-      protected[this] def parCombiner = pm.ParHashMap.newCombiner[A, B]
+      protected[this] override def parCombiner = pm.ParHashMap.newCombiner[A, B]
     }
 
   implicit def cmHashset2ParHashSet[A](col: cm.HashSet[A]) =
-    new Parallelizable[A, pm.ParHashSet[A]] {
+    new CustomParallelizable[A, pm.ParHashSet[A]] {
       def seq = col
       override def par = new pm.ParHashSet(col.hashTableContents)
-      protected[this] def parCombiner = pm.ParHashSet.newCombiner[A]
+      protected[this] override def parCombiner = pm.ParHashSet.newCombiner[A]
+    }
+
+  implicit def cmWrappedArray2ParArray[A](col: cm.WrappedArray[A]) =
+    new CustomParallelizable[A, pm.ParArray[A]] {
+      def seq = col
+      override def par = pm.ParArray.handoff(col.array)
+      protected[this] override def parCombiner = pm.ParArray.newCombiner[A]
     }
   PARNO@*/
 }

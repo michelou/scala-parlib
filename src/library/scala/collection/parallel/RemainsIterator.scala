@@ -6,6 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
+
 package scala.collection.parallel
 
 /*@PAR*/
@@ -13,20 +14,13 @@ import scala.collection.Parallel
 /*PAR@*/
 import scala.collection.generic.Signalling
 import scala.collection.generic.DelegatedSignalling
-<<<<<<< HEAD
-/*@PAR*/
-=======
 import scala.collection.generic.IdleSignalling
->>>>>>> 91148376049a152edec12348ff9b7e9e93e6ebe1
 import scala.collection.generic.CanCombineFrom
-/*PAR@*/
-/*@NOPAR
-import generic.CanCombineFrom
-PARNO@*/
 import scala.collection.mutable.Builder
 import scala.collection.Iterator.empty
 import scala.collection.GenTraversableOnce
 import scala.collection.parallel.immutable.repetition
+
 
 private[collection] trait RemainsIterator[+T] extends Iterator[T] {
   /** The number of elements this iterator has yet to iterate.
@@ -679,4 +673,37 @@ self =>
   def patchParSeq[U >: T](from: Int, patchElems: SeqSplitter[U], replaced: Int) = new Patched(from, patchElems, replaced)
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

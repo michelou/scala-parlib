@@ -11,11 +11,7 @@ package scala.collection.immutable
 
 /*@PAR*/
 import scala.collection.parallel.immutable.ParRange
-<<<<<<< HEAD
 /*PAR@*/
-import annotation.bridge
-=======
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 
 /** The `Range` class represents integer values in range
  *  ''[start;end)'' with non-zero step value `step`.
@@ -406,7 +402,3 @@ object Range {
     def inclusive(start: Int, end: Int, step: Int) = NumericRange.inclusive(start, end, step)
   }
 }
-<<<<<<< HEAD
- 
-=======
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a

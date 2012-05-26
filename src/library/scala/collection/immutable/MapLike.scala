@@ -12,11 +12,7 @@ package immutable
 import generic._
 /*@PAR*/
 import parallel.immutable.ParMap
-<<<<<<< HEAD
 /*PAR@*/
-import annotation.bridge
-=======
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 
 /**
  *  A generic template for immutable maps from keys of type `A`

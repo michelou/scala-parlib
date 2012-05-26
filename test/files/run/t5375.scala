@@ -1,8 +1,8 @@
 
 
 
-import collection.parallel.CompositeThrowable
-
+/*@PAR*/ import collection.parallel.CompositeThrowable /*PAR@*/
+/*@NOPAR import collection.parallel._ NOPAR@*/
 
 
 object Test {

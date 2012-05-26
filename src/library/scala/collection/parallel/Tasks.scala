@@ -8,13 +8,10 @@
 
 package scala.collection.parallel
 
-<<<<<<< HEAD
-=======
 
 
 import java.util.concurrent.ThreadPoolExecutor
 
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 import scala.concurrent.forkjoin._
 import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks._
@@ -22,27 +19,11 @@ import scala.util.control.Breaks._
 import annotation.unchecked.uncheckedVariance
 
 
-<<<<<<< HEAD
-/** A trait that declares task execution capabilities used
- *  by parallel collections.
- */
-trait Tasks {
-
-  private[parallel] val debugMessages = collection.mutable.ArrayBuffer[String]()
-
-  private[parallel] def debuglog(s: String) = synchronized {
-    debugMessages += s
-  }
-
-  trait Task[R, +Tp] {
-    type Result = R
-=======
 
 trait Task[R, +Tp] {
   type Result = R
 
   def repr = this.asInstanceOf[Tp]
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 
   /** Body of the task - non-divisible unit of work done by this task.
    *  Optionally is provided with the result from the previous completed task
@@ -576,8 +557,6 @@ trait ExecutionContextTasks extends Tasks {
   
 }
 
-<<<<<<< HEAD
-=======
 
 
 
@@ -588,4 +567,3 @@ trait ExecutionContextTasks extends Tasks {
 
 
 
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a

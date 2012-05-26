@@ -53,11 +53,7 @@ import annotation.migration
  *  @author Aleksandar Prokopec
  *  @since 2.9
  */
-<<<<<<< HEAD
-trait GenTraversableLike[+A, +Repr] extends GenTraversableOnce[A] /*@PAR*/ with Parallelizable[A, parallel.ParIterable[A]] /*PAR@*/ {
-=======
-trait GenTraversableLike[+A, +Repr] extends Any with GenTraversableOnce[A] with Parallelizable[A, parallel.ParIterable[A]] {
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
+trait GenTraversableLike[+A, +Repr] extends Any with GenTraversableOnce[A] /*@PAR*/ with Parallelizable[A, parallel.ParIterable[A]] /*PAR@*/ {
 
   def repr: Repr
 

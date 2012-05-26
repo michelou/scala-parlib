@@ -47,17 +47,15 @@ class ReflectiveRunner {
       else // auto detection
         new ConsoleFileManager
 
-<<<<<<< HEAD
-    val files = fileManager.getReflectiveLibFiles
-=======
-    import fileManager.
-      { latestCompFile, latestLibFile, latestPartestFile, latestFjbgFile, latestScalapFile, latestActorsFile }
-    val files =
-      Array(latestCompFile, latestLibFile, latestPartestFile, latestFjbgFile, latestScalapFile, latestActorsFile) map (x => io.File(x))
-
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
+    val files = fileManager.getReflectiveLibFiles.toArray
     val sepUrls   = files map (_.toURL)
-    val sepLoader = new URLClassLoader(sepUrls.toArray, null)
+    var sepLoader = new URLClassLoader(sepUrls, null)
+
+    // this is a workaround for https://issues.scala-lang.org/browse/SI-5433
+    // when that bug is fixed, this paragraph of code can be safely removed
+    // we hack into the classloader that will become parent classloader for scalac
+    // this way we ensure that reflective macro lookup will pick correct Code.lift
+    sepLoader = new URLClassLoader((PathSettings.srcCodeLib +: files) map (_.toURL), null)
 
     if (isPartestDebug)
       println("Loading classes from:\n" + sepUrls.mkString("\n"))

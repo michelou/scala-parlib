@@ -9,16 +9,15 @@
 package scala.collection
 package concurrent
 
-
-
 import java.util.concurrent.atomic._
 import collection.immutable.{ ListMap => ImmutableListMap }
 import collection.parallel.mutable.ParTrieMap
 import generic._
 import annotation.tailrec
 import annotation.switch
-
-
+/*@NOPAR
+import parallel.CustomParallelizable
+/*NO/*PAR@*/
 
 private[collection] final class INode[K, V](bn: MainNode[K, V], g: Gen) extends INodeBase[K, V](g) {
   import INodeBase._

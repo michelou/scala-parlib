@@ -6,6 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
+
 package scala.collection.parallel
 
 /*@PAR*/

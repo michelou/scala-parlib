@@ -13,11 +13,7 @@ import immutable.{ List, Range }
 import generic._
 /*@PAR*/
 import parallel.ParSeq
-<<<<<<< HEAD
 /*PAR@*/
-import annotation.bridge
-=======
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 import scala.math.Ordering
 
 /** A template trait for sequences of type `Seq[A]`
@@ -64,14 +60,11 @@ import scala.math.Ordering
  *  @define orderDependent
  *  @define orderDependentFold
  */
-<<<<<<< HEAD
-trait SeqLike[+A, +Repr] extends IterableLike[A, Repr]
+trait SeqLike[+A, +Repr] extends Any
+                            with IterableLike[A, Repr]
                             with GenSeqLike[A, Repr]
                    /*@PAR*/ with Parallelizable[A, ParSeq[A]] /*PAR@*/
 { self =>
-=======
-trait SeqLike[+A, +Repr] extends Any with IterableLike[A, Repr] with GenSeqLike[A, Repr] with Parallelizable[A, ParSeq[A]] { self =>
->>>>>>> f406550146250f5a6036d3d778582efa6d68252a
 
   override protected[this] def thisCollection: Seq[A] = this.asInstanceOf[Seq[A]]
   override protected[this] def toCollection(repr: Repr): Seq[A] = repr.asInstanceOf[Seq[A]]
