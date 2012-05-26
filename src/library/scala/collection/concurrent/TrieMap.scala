@@ -17,7 +17,7 @@ import annotation.tailrec
 import annotation.switch
 /*@NOPAR
 import parallel.CustomParallelizable
-/*NO/*PAR@*/
+NOPAR@*/
 
 private[collection] final class INode[K, V](bn: MainNode[K, V], g: Gen) extends INodeBase[K, V](g) {
   import INodeBase._
